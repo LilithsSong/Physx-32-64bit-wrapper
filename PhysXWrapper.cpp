@@ -1,114 +1,78 @@
-#include <PxPhysicsAPI.h>
+#include "PhysXWrapper.h"
 #include <iostream>
+#include <cstdlib>
 
 using namespace physx;
+using namespace PhysXWrapper;
 
-class PhysXWrapper
-{
-public:
-    PhysXWrapper(bool is64bit = true)
-        : m_is64bit(is64bit)
-    {
-        init();
+PhysXWrapper::PhysXWrapper()
+    : gFoundation(nullptr), gPhysics(nullptr), gScene(nullptr), gCooking(nullptr) {}
+
+PhysXWrapper::~PhysXWrapper() {
+    shutdown();
+}
+
+bool PhysXWrapper::initialize() {
+    // For simplicity, we assume 64-bit is the default here
+    return init64BitPhysX();
+}
+
+void PhysXWrapper::shutdown() {
+    if (gScene) {
+        gScene->release();
+    }
+    if (gPhysics) {
+        gPhysics->release();
+    }
+    if (gCooking) {
+        gCooking->release();
+    }
+    if (gFoundation) {
+        gFoundation->release();
+    }
+}
+
+bool PhysXWrapper::init64BitPhysX() {
+    // Initialize the foundation for 64-bit PhysX
+    gFoundation = PxCreateFoundation(PX_PHYSX_VERSION, gAllocator, gErrorCallback);
+    if (!gFoundation) {
+        std::cerr << "PhysX foundation initialization failed!" << std::endl;
+        return false;
     }
 
-    ~PhysXWrapper()
-    {
-        cleanup();
+    // Initialize the 64-bit PhysX SDK
+    gPhysics = PxCreatePhysics(PX_PHYSX_VERSION, *gFoundation, PxTolerancesScale(), true, nullptr);
+    if (!gPhysics) {
+        std::cerr << "PhysX initialization failed!" << std::endl;
+        return false;
     }
 
-    void upgradeTo64bit()
-    {
-        if (!m_is64bit)
-        {
-            std::cout << "Upgrading to 64-bit PhysX..." << std::endl;
-            m_is64bit = true;
-            cleanup();
-            init();
-        }
+    // Initialize cooking
+    gCooking = PxCreateCooking(PX_PHYSX_VERSION, *gFoundation, PxCookingParams(PxTolerancesScale()));
+    if (!gCooking) {
+        std::cerr << "PhysX cooking initialization failed!" << std::endl;
+        return false;
     }
 
-    void downgradeTo32bit()
-    {
-        if (m_is64bit)
-        {
-            std::cout << "Downgrading to 32-bit PhysX..." << std::endl;
-            m_is64bit = false;
-            cleanup();
-            init();
+    return true;
+}
+
+bool PhysXWrapper::init32BitPhysX() {
+    // Initialize a 32-bit version of PhysX (as an example)
+    std::cerr << "32-bit initialization is not implemented in this wrapper." << std::endl;
+    return false;
+}
+
+PxScene* PhysXWrapper::createScene() {
+    if (gPhysics) {
+        // Create the scene based on PhysX 64-bit
+        PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
+        sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
+        gScene = gPhysics->createScene(sceneDesc);
+        if (!gScene) {
+            std::cerr << "Failed to create PhysX scene!" << std::endl;
+            return nullptr;
         }
     }
-
-private:
-    bool m_is64bit;
-    PxFoundation* m_foundation;
-    PxPhysics* m_physics;
-    PxScene* m_scene;
-    PxDefaultCpuDispatcher* m_dispatcher;
-    PxPvd* m_pvd;
-
-    void init()
-    {
-        if (m_is64bit)
-        {
-            m_foundation = PxCreateFoundation(PX_PHYSICS_VERSION, m_allocator, m_errorCallback);
-            m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, PxTolerancesScale(), true, nullptr);
-        }
-        else
-        {
-            m_foundation = PxCreateFoundation(PX_PHYSICS_VERSION, m_allocator, m_errorCallback);
-            m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, PxTolerancesScale(), true, nullptr);
-        }
-
-        m_dispatcher = PxDefaultCpuDispatcherCreate(2); // Default CPU dispatcher with 2 worker threads.
-        m_scene = m_physics->createScene(PxSceneDesc(m_physics->getTolerancesScale()));
-        m_pvd = PxCreatePvd(*m_foundation);
-        m_scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 0.1f);
-        m_scene->setPvdConnection(m_pvd);
-    }
-
-    void cleanup()
-    {
-        if (m_scene)
-        {
-            m_scene->release();
-            m_scene = nullptr;
-        }
-
-        if (m_physics)
-        {
-            m_physics->release();
-            m_physics = nullptr;
-        }
-
-        if (m_foundation)
-        {
-            m_foundation->release();
-            m_foundation = nullptr;
-        }
-
-        if (m_dispatcher)
-        {
-            m_dispatcher->release();
-            m_dispatcher = nullptr;
-        }
-
-        if (m_pvd)
-        {
-            m_pvd->release();
-            m_pvd = nullptr;
-        }
-    }
-};
-
-// Main function for example usage
-int main()
-{
-    PhysXWrapper physxWrapper;
-
-    // Simulate some physics actions
-    physxWrapper.upgradeTo64bit();  // Example of upgrading to 64-bit
-    physxWrapper.downgradeTo32bit();  // Example of downgrading to 32-bit
-
-    return 0;
+    return gScene;
 }
