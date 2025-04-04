@@ -1,36 +1,31 @@
 #ifndef PHYSXWRAPPER_H
 #define PHYSXWRAPPER_H
 
-#include <PxPhysicsAPI.h> // Include PhysX SDK headers
+#include <PxPhysicsAPI.h>
 
 namespace PhysXWrapper {
 
-    // Define a class to wrap PhysX SDK
-    class PhysXWrapper {
-    public:
-        PhysXWrapper();
-        ~PhysXWrapper();
+class PhysXWrapper {
+public:
+    PhysXWrapper();
+    ~PhysXWrapper();
 
-        bool initialize();
-        void shutdown();
+    bool initialize();
+    void shutdown();
 
-        // Add other helper functions here to abstract PhysX calls
-        // Example function to create a physics scene
-        physx::PxScene* createScene();
+    physx::PxScene* createScene();
 
-    private:
-        physx::PxPhysics* gPhysics;        // Pointer to the PhysX SDK
-        physx::PxFoundation* gFoundation;  // Foundation for initializing PhysX
-        physx::PxScene* gScene;            // Scene instance
-        physx::PxCooking* gCooking;        // Cooking instance
+private:
+    physx::PxPhysics* gPhysics;
+    physx::PxFoundation* gFoundation;
+    physx::PxScene* gScene;
+    physx::PxCooking* gCooking;
 
-        // Function to initialize the 64-bit PhysX SDK
-        bool init64BitPhysX();
+    bool init64BitPhysX();
+    bool init32BitPhysX();
+};
 
-        // Optionally handle any specifics based on the 32-bit version
-        bool init32BitPhysX();
-    };
-
-}
+} // namespace PhysXWrapper
 
 #endif // PHYSXWRAPPER_H
+
